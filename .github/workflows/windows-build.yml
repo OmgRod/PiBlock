@@ -34,7 +34,7 @@ jobs:
       - name: Install frontend deps
         working-directory: ./web
         run: |
-          npm ci
+          npm i
 
       - name: Build frontend
         working-directory: ./web
