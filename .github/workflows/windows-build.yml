@@ -1,0 +1,104 @@
+name: Build Windows release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Build frontend (install Node)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install frontend deps
+        working-directory: ./web
+        run: |
+          npm ci
+
+      - name: Build frontend
+        working-directory: ./web
+        run: |
+          npm run build
+
+      - name: Build Go binary (Windows)
+        env:
+          CGO_ENABLED: 0
+          GOOS: windows
+          GOARCH: amd64
+        run: |
+          go build -ldflags "-s -w" -o piblock.exe
+
+      - name: Prepare release folder
+        run: |
+          mkdir release
+          mkdir release\piblock-portable
+          mkdir release\piblock-installer
+          copy piblock.exe release\piblock-portable\
+
+      - name: Copy frontend dist into release
+        run: |
+          xcopy /E /I web\dist release\piblock-portable\dist\
+          copy web\server.js release\piblock-portable\server.js
+          xcopy /E /I web\public release\piblock-portable\public || echo skip
+
+      - name: Download Node runtime (Windows x64)
+        run: |
+          powershell -Command "$url='https://nodejs.org/dist/v18.20.0/node-v18.20.0-win-x64.zip'; (New-Object System.Net.WebClient).DownloadFile($url, 'node.zip')"
+          powershell -Command "Expand-Archive -Path node.zip -DestinationPath node_tmp"
+          powershell -Command "Move-Item -Path node_tmp\node-v18.20.0-win-x64 -Destination node"
+          rmdir /S /Q node_tmp
+          del node.zip
+
+      - name: Copy bundled node into release
+        run: |
+          xcopy /E /I node release\piblock-portable\node\
+
+      - name: Create portable ZIP
+        run: |
+          powershell -Command "Compress-Archive -Path release\piblock-portable\* -DestinationPath release\piblock-portable.zip"
+
+      - name: Add NSIS installer script
+        run: |
+          copy installer\piblock.nsi .\
+
+      - name: Install NSIS (if missing) and build installer
+        shell: powershell
+        run: |
+          # makensis is typically available on windows-latest; try to run it
+          if (Get-Command makensis -ErrorAction SilentlyContinue) {
+              Write-Host 'makensis found'
+          } else {
+              choco install -y nsis
+          }
+          makensis /V2 piblock.nsi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: piblock-release
+          path: |
+            release\piblock-portable.zip
+            *.exe
+            *.msi
+            release\piblock-portable\**\*

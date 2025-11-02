@@ -1,0 +1,36 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+vendor/
+bin/
+coverage.out
+*.test
+# VS Code
+.vscode/
+# OS
+.DS_Store
+Thumbs.db
+# build artifacts
+dist/
+node_modules/
+web/dist/
+web/node/
+web/package-lock.json
+blocklist/logs.jsonl
+.env
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# IDE
+*.idea/
+*.iml
+
+# keep go mod files
+!go.mod
+!go.sum
+
+blocklist/

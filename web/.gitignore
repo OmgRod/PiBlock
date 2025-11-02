@@ -1,0 +1,12 @@
+# Node
+node_modules/
+dist/
+.env
+npm-debug.log*
+.DS_Store
+
+# build outputs
+*.local
+
+# logs
+logs.jsonl
