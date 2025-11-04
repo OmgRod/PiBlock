@@ -1,0 +1,13 @@
+[Unit]
+Description=PiBlock DNS/Control Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{PROJECT_DIR}}
+ExecStart={{PROJECT_DIR}}/piblock
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

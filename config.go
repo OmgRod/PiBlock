@@ -19,7 +19,9 @@ var AppConfig = &Config{
     Upstream: "1.1.1.1:53",
     BlockingMode: "redirect",
     BlockPageIP: "",
-    BlockPagePort: 9080,
+    // Block page runs on a separate port from the Rust control API to avoid collisions.
+    // Default to 8083 so it doesn't conflict with the control API (9080) or frontend (3000).
+    BlockPagePort: 8083,
 }
 
 // DetectLocalIP determines a likely local IP address by opening a UDP connection.
