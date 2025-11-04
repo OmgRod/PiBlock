@@ -27,13 +27,30 @@ apt-get install -y libssl-dev || true
 echo "Building rustdns (release)..."
 if [ -d "$ROOT_DIR/rustdns" ]; then
   pushd "$ROOT_DIR/rustdns" >/dev/null
-  # If the user hasn't set up Rust, instruct
-  if ! command -v cargo >/dev/null 2>&1; then
-    echo "cargo not found. Please install Rust (rustup) first: https://rustup.rs" >&2
+  # Try to find cargo. If running under sudo the user's $HOME/.cargo/bin may not be
+  # on PATH, so check the invoking user's home directory and add it if present.
+  CARGO_CMD=""
+  if command -v cargo >/dev/null 2>&1; then
+    CARGO_CMD="cargo"
+  else
+    if [ -n "${SUDO_USER:-}" ]; then
+      USER_HOME=$(eval echo "~${SUDO_USER}")
+      if [ -x "${USER_HOME}/.cargo/bin/cargo" ]; then
+        export PATH="${USER_HOME}/.cargo/bin:$PATH"
+        CARGO_CMD="cargo"
+      fi
+    fi
+    if [ -z "${CARGO_CMD}" ] && [ -x "/usr/local/cargo/bin/cargo" ]; then
+      export PATH="/usr/local/cargo/bin:$PATH"
+      CARGO_CMD="cargo"
+    fi
+  fi
+  if [ -z "${CARGO_CMD}" ]; then
+    echo "cargo not found. If you have Rust installed for your user, run this script with preserved PATH (e.g. 'sudo -E ./deploy/install_and_run.sh') or install Rust system-wide: https://rustup.rs" >&2
     popd >/dev/null
     exit 1
   fi
-  cargo build --release
+  $CARGO_CMD build --release
   popd >/dev/null
 else
   echo "rustdns directory not found; skipping Rust build" >&2
