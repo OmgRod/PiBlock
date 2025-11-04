@@ -66,15 +66,12 @@ func main() {
 	go func() {
 		webDir := "./web"
 
-		// determine bundled node/npm if available
+		// determine bundled npm if available
 		nodeDir := filepath.Join(".", "node")
-		var nodeExe string
 		var npmCmd string
 		if runtime.GOOS == "windows" {
-			nodeExe = filepath.Join(nodeDir, "node.exe")
 			npmCmd = filepath.Join(nodeDir, "npm.cmd")
 		} else {
-			nodeExe = filepath.Join(nodeDir, "bin", "node")
 			npmCmd = filepath.Join(nodeDir, "bin", "npm")
 		}
 
