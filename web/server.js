@@ -48,7 +48,10 @@ async function proxyHandler(req, res) {
     res.setHeader('Pragma', 'no-cache')
     res.setHeader('Expires', '0')
 
-    const buf = await response.buffer()
+    // Some fetch implementations (cross-fetch) don't provide response.buffer().
+    // Use arrayBuffer() and convert to a Node Buffer for sending binary safely.
+    const arrayBuf = await response.arrayBuffer()
+    const buf = Buffer.from(arrayBuf)
     res.status(response.status).send(buf)
   } catch (err) {
     res.status(500).send(err.message)

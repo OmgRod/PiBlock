@@ -1,0 +1,285 @@
+// PiBlock SCSS - organized and themeable
+// Sections:
+// 1. Variables
+// 2. CSS variable export for runtime usage
+// 3. Reset & base typography
+// 4. Layout (container, grid)
+// 5. Navbar / Tabs
+// 6. Panels, cards, lists
+// 7. Forms & Buttons
+// 8. Charts (SVG) styling
+// 9. Responsive tweaks
+
+// 1) SCSS variables (single source of truth)
+$bg: #071025;
+$bg-2: #06121a;
+$page-bg: linear-gradient(180deg, $bg 0%, $bg-2 100%);
+$card: #0b1220;
+$text: #ffffff;
+$muted: rgba(255,255,255,0.85);
+$accent: #f59e0b; // warm amber
+$glass: rgba(255,255,255,0.04);
+$glass-2: rgba(255,255,255,0.02);
+
+// 2) expose CSS variables for runtime / inline usage
+:root {
+  --bg: #{$bg};
+  --card: #{$card};
+  --text: #{$text};
+  --muted: #{$muted};
+  --accent: #{$accent};
+  --glass: #{$glass};
+  --glass-2: #{$glass-2};
+  /* ensure any library using this bootstrap var inherits our text color */
+  --bs-body-color: var(--text);
+}
+
+// 3) Reset & base
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  padding: 12px;
+  font-family: Inter, system-ui, 'Segoe UI', Roboto, Helvetica, Arial;
+  color: var(--text);
+  background: var(--bg);
+  background: #{$page-bg};
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+// make sure standard text elements are readable
+h1,h2,h3,h4,h5,h6,p,div,span,strong,b,em,li,a,button,input,textarea,label {
+  color: var(--text) !important;
+}
+
+.container { max-width: 1100px; margin: 0 auto; }
+
+// 4) Layout
+.grid { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
+.app main { padding-top: 8px; }
+
+// 5) Navbar / Tabs
+.navbar { display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; }
+.navbar .container { display:flex; align-items:center; gap:12px; justify-content:space-between; width:100%; }
+.navbar-brand { font-weight: 700; font-size: 1.1rem; color: var(--text); flex-shrink:0; white-space:nowrap }
+.nav { display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow:hidden }
+.nav-link {
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex; align-items:center; gap:6px;
+}
+.nav-link:hover { background: var(--glass-2); }
+.nav-link.active {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  color: var(--accent);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.25);
+}
+
+/* Search input in navbar */
+.nav-search { display:flex; gap:8px; align-items:center; margin-left:8px }
+.nav-search input { padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:var(--text); min-width:180px }
+.nav-actions { display:flex; gap:8px; align-items:center; }
+
+/* mobile collapse: hide nav on small screens, show a menu button */
+.nav-toggle { display:none; background:transparent; border:1px solid rgba(255,255,255,0.04); padding:6px 8px; border-radius:8px; color:var(--text) }
+@media (max-width:720px) {
+  .nav { display:none }
+  .nav-toggle { display:inline-flex }
+  .nav-search input { min-width:120px }
+}
+
+/* Theme: light variant toggle (adds .light to body) */
+body.light {
+  --bg: #f6f7fb;
+  --card: #ffffff;
+  --text: #0b1020;
+  --muted: rgba(11,16,32,0.6);
+  --accent: #2563eb;
+  background: linear-gradient(180deg,#f6f7fb 0%, #e9eefb 100%);
+  color: var(--text);
+}
+
+// Tab-style navigation (visual separation like tabs)
+.tabs { display:flex; gap:6px; border-bottom: 1px solid rgba(255,255,255,0.04); padding-bottom:8px; }
+.tabs .tab { padding:8px 12px; border-radius:8px 8px 0 0; background: transparent; }
+.tabs .tab.active { background: var(--card); color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+// 6) Panels / cards
+.panel {
+  background: var(--card);
+  padding: 14px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+  border: 1px solid rgba(255,255,255,0.03);
+}
+.panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.lists-grid { display:flex; flex-direction:column; gap:8px; }
+.list-card { display:flex; justify-content:space-between; align-items:center; padding:10px; background: rgba(255,255,255,0.02); border-radius:8px; cursor:pointer; }
+.list-name { font-weight:600 }
+.list-count { font-size:0.9rem; color: var(--muted); }
+
+// 7) Forms & Buttons
+input, textarea { padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background: transparent; color: var(--text); }
+.search-row { display:flex; gap:8px }
+.list-controls { display:flex; flex-direction:column; gap:8px; margin-bottom:8px }
+
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 10px; border-radius:8px; border:0; cursor:pointer; background: var(--accent); color: #111111; }
+.btn.small { padding:6px 8px; font-size:0.85rem }
+.btn.tiny { padding:4px 6px; font-size:0.8rem }
+.btn.danger { background: #ff6b6b; color: #fff }
+.btn[disabled], .btn:disabled { opacity:0.6; cursor:not-allowed }
+
+.list-items { display:flex; flex-direction:column; gap:6px }
+.list-item { display:flex; justify-content:space-between; align-items:center; padding:10px; border-radius:8px; background: rgba(255,255,255,0.02) }
+
+.muted { color: var(--muted); }
+.small { font-size:0.85rem }
+
+// 8) Charts
+.pie { width: 120px; height:120px }
+.barchart { width:100%; height:auto }
+.barchart text { fill: var(--muted); font-family: inherit }
+
+/* style rectangles inside charts to use accent or blue */
+.barchart rect { fill: #38bdf8 }
+
+// 9) Responsive
+@media (max-width: 640px) {
+  .grid { grid-template-columns: 1fr; gap:10px }
+  .panel { padding:10px }
+}
+
+@media (max-width: 480px) {
+  body { padding:8px }
+  .tab { padding:6px 8px; font-size:0.9rem }
+  .panel { padding:8px }
+  input, button { font-size:14px; padding:6px }
+}
+// SCSS stylesheet for PiBlock UI
+// Define variables (also mirror into :root for CSS variable compatibility)
+$bg: #0f1724;
+$card: #0b1220;
+$text: #ffffff;
+$muted: #ffffff;
+$accent: #f59e0b;
+$glass: rgba(255,255,255,0.04);
+
+:root{
+  --bg: #{$bg};
+  --card: #{$card};
+  --text: #{$text};
+  --muted: #{$muted};
+  --accent: #{$accent};
+  --glass: #{$glass};
+  --bs-body-color: var(--text);
+}
+
+/* Force common text elements to use our text color (override Bootstrap defaults) */
+h1,h2,h3,h4,h5,h6,p,div,span,strong,b,em,li,a,button,input,textarea,label {
+  color: var(--text) !important;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family: Inter, system-ui, 'Segoe UI', Roboto, Helvetica, Arial;
+  color: var(--text);
+  background: linear-gradient(180deg,#071025 0%, #06121a 100%);
+  background-repeat:no-repeat;
+  background-attachment:fixed;
+  background-size:cover;
+  margin:0; padding:12px;
+}
+.container{max-width:1100px;margin:0 auto}
+
+/* Topbar / toolbar */
+.topbar{font-weight:700;font-size:1.1rem;padding:10px 12px;border-radius:8px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));margin-bottom:10px}
+.toolbar{display:flex;gap:8px;margin:8px 0}
+.tab{background:transparent;color:var(--text);border:0;padding:8px 10px;border-radius:8px}
+.tab.active{background:var(--glass);color:var(--accent)}
+
+/* ensure bootstrap Nav.Link and Navbar text use our palette */
+.navbar, .navbar .navbar-brand, .navbar .nav-link {
+  color: var(--text) !important;
+}
+.navbar .nav-link.active {
+  color: var(--accent) !important;
+}
+
+/* Minimal replacements for commonly used Bootstrap container/navbar/nav/button classes
+   so react-bootstrap components render acceptably without importing Bootstrap CSS. */
+.container-fluid, .container { max-width:1100px; margin:0 auto; padding:0 12px }
+.mb-2 { margin-bottom: 0.5rem !important }
+.navbar { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background: transparent; }
+.navbar-brand { font-weight:700; font-size:1.1rem; color:var(--text) }
+.nav { display:flex; gap:8px; align-items:center }
+.nav-link { text-decoration:none; color:var(--text); padding:6px 10px; border-radius:8px }
+.nav-link:hover { background: rgba(255,255,255,0.02) }
+
+/* Buttons - simple system replacing btn classes used in the app */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 10px; border-radius:8px; border:0; cursor:pointer; }
+.btn.small { padding:6px 8px; font-size:0.85rem }
+.btn.tiny { padding:4px 6px; font-size:0.8rem }
+.btn.danger { background:#ff6b6b; color:white }
+.btn[disabled], .btn:disabled { opacity:0.6; cursor:not-allowed }
+
+/* Forms */
+label { color: var(--muted); }
+
+/* App layout */
+.app main { padding: 12px 0 }
+
+
+/* Layout panels */
+.grid{display:grid;grid-template-columns:300px 1fr;gap:16px}
+.panel{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+.panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.lists-grid{display:flex;flex-direction:column;gap:8px}
+.list-card{display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(255,255,255,0.02);border-radius:8px;cursor:pointer}
+.list-name{font-weight:600}
+.list-count{font-size:0.9rem;color:var(--muted)}
+
+.list-controls{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.search-row{display:flex;gap:8px}
+input,textarea{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text)}
+button{background:var(--accent);border:0;padding:8px 10px;border-radius:8px;color:#111111;cursor:pointer}
+.btn.small{padding:6px 8px;font-size:0.85rem}
+.btn.tiny{padding:4px 6px;font-size:0.8rem}
+.btn.danger{background:#ff6b6b;color:white}
+
+.list-items{display:flex;flex-direction:column;gap:6px}
+.list-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02)}
+
+.logs-table{width:100%;border-collapse:collapse}
+.logs-table th{font-size:0.8rem;color:var(--muted);text-align:left;padding:6px}
+.logs-table td{padding:8px;border-top:1px solid rgba(255,255,255,0.02);color:var(--text)}
+.muted{color:var(--muted)}
+.small{font-size:0.85rem}
+
+/* Responsive: collapse to single column on small screens */
+@media (max-width: 640px){
+  .grid{grid-template-columns:1fr;gap:10px}
+  .toolbar{flex-wrap:wrap}
+  .panel{padding:10px}
+  .list-card{padding:8px}
+}
+
+/* Extra small - target 480x320 and similar */
+@media (max-width: 480px){
+  body{padding:8px}
+  .topbar{font-size:1rem;padding:8px}
+  .tab{padding:6px 8px;font-size:0.9rem}
+  .panel{padding:8px;border-radius:8px}
+  .list-card{padding:8px;font-size:0.95rem}
+  input,button{font-size:14px;padding:6px}
+  .logs-table th,.logs-table td{font-size:12px;padding:6px}
+  .list-controls{gap:6px}
+  .search-row{flex-direction:column}
+}

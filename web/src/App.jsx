@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import './styles.css'
-import { Container, Navbar, Nav, Button, Form, Row, Col, Card } from 'react-bootstrap'
-import { BsPlus, BsTrash, BsDownload, BsGear } from 'react-icons/bs'
+import './styles.scss'
+// Removed react-bootstrap dependency; using lightweight custom CSS and native elements
+import { BsPlus, BsTrash, BsDownload, BsGear, BsList, BsBarChart, BsFileEarmarkText } from 'react-icons/bs'
 
 function ListsPanel({ onNavigate }) {
   const [lists, setLists] = useState({})
@@ -99,7 +99,40 @@ function ListDetail({ name, onClose, onRemoved }) {
     <div className="panel detail">
       <div className="panel-header">
         <h2>{name}</h2>
-        <div>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn small" onClick={async ()=>{
+            if (!window.confirm(`Delete entire list ${name}? This will remove the file from disk.`)) return
+            try{
+              const r = await fetch(`/lists/${encodeURIComponent(name)}/delete`, { method: 'DELETE' })
+              if (!r.ok) { const t = await r.text(); throw new Error(t) }
+              window.alert('Deleted')
+              onClose()
+            }catch(e){ window.alert('Failed to delete list: '+e) }
+          }}>Delete</button>
+          <button className="btn small" onClick={async ()=>{
+            // fetch all items and download as text
+            try{
+              const all = []
+              let offset = 0
+              const limit = 500
+              while (true) {
+                const qs = new URLSearchParams({ offset: String(offset), limit: String(limit) })
+                const r = await fetch(`/lists/items/${encodeURIComponent(name)}?${qs.toString()}`)
+                if (!r.ok) throw new Error('fetch failed')
+                const j = await r.json()
+                const items = j.items || []
+                items.forEach(i=>all.push(i))
+                offset += items.length
+                if (offset >= (j.total || 0) || items.length === 0) break
+              }
+              const blob = new Blob([all.join('\n')], { type: 'text/plain' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `${name}.txt`
+              document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
+            }catch(e){ window.alert('Export failed: '+e) }
+          }}>Export</button>
           <button className="btn small" onClick={onClose}>Close</button>
         </div>
       </div>
@@ -151,7 +184,7 @@ function AnalyticsPanel() {
   }
   useEffect(()=>{ loadAnalytics() }, [])
   if (!analytics && !error) return <div className="panel"><h2>Analytics</h2><div>Loading...</div></div>
-  if (error) return <div className="panel"><h2>Analytics</h2><div className="muted">Failed to load analytics: {error}</div><div style={{marginTop:8}}><Button onClick={loadAnalytics}>Retry</Button></div></div>
+  if (error) return <div className="panel"><h2>Analytics</h2><div className="muted">Failed to load analytics: {error}</div><div style={{marginTop:8}}><button className="btn small" onClick={loadAnalytics}>Retry</button></div></div>
 
   // utility: simple pie chart (two slices) using inline SVG
   const PieChart = ({values, labels, size=120, colors=['#38bdf8','#ff6b6b']}) => {
@@ -182,9 +215,9 @@ function AnalyticsPanel() {
           const y = idx * barH
           return (
             <g key={idx} transform={`translate(0, ${y})`}>
-              <text x={0} y={barH/2+4} fontSize={12} fill="#cbd5e1">{it[0]}</text>
+              <text x={0} y={barH/2+4} fontSize={12} fill="var(--muted)">{it[0]}</text>
               <rect x={120} y={2} width={w} height={barH-6} fill="#38bdf8" />
-              <text x={120+w+6} y={barH/2+4} fontSize={12} fill="#cbd5e1">{it[1]}</text>
+              <text x={120+w+6} y={barH/2+4} fontSize={12} fill="var(--muted)">{it[1]}</text>
             </g>
           )
         })}
@@ -315,19 +348,94 @@ export default function App(){
   const [view, setView] = useState('lists')
   const [selected, setSelected] = useState(null)
   const [refreshFlag, setRefreshFlag] = useState(0)
+  const [navOpen, setNavOpen] = useState(false)
+  const [searchQ, setSearchQ] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState(null)
+
+  useEffect(()=>{
+    // apply theme from localStorage
+    const t = localStorage.getItem('piblock:theme')
+    if (t === 'light') document.body.classList.add('light')
+  }, [])
+
+  const toggleTheme = ()=>{
+    const isLight = document.body.classList.toggle('light')
+    localStorage.setItem('piblock:theme', isLight ? 'light' : 'dark')
+  }
+
+  const doGlobalSearch = async (q) => {
+    if (!q || q.trim() === '') return
+    setSearching(true); setSearchResults(null)
+    try{
+      const listsResp = await fetch('/lists')
+      const lists = await listsResp.json()
+      const names = Object.keys(lists)
+      const results = []
+      // query each list (small parallelism)
+      await Promise.all(names.map(async (name) => {
+        try{
+          const qs = new URLSearchParams({ q, limit: '20', offset: '0' })
+          const r = await fetch(`/lists/items/${encodeURIComponent(name)}?${qs.toString()}`)
+          if (!r.ok) return
+          const j = await r.json()
+          (j.items || []).forEach(it => results.push({ list: name, domain: it }))
+        }catch(e){ /* ignore per-list errors */ }
+      }))
+      setSearchResults({ q, results })
+    }catch(e){ setSearchResults({ q, error: String(e), results: [] }) }
+    setSearching(false)
+  }
+
   return (
     <div className="app">
-      <Navbar bg="dark" variant="dark" className="mb-2">
-        <Container fluid>
-          <Navbar.Brand>PiBlock</Navbar.Brand>
-          <Nav>
-            <Nav.Link active={view==='lists'} onClick={()=>setView('lists')}>Lists</Nav.Link>
-            <Nav.Link active={view==='analytics'} onClick={()=>setView('analytics')}>Analytics</Nav.Link>
-            <Nav.Link active={view==='logs'} onClick={()=>setView('logs')}>Logs</Nav.Link>
-            <Nav.Link active={view==='settings'} onClick={()=>setView('settings')}><BsGear/></Nav.Link>
-          </Nav>
-        </Container>
-      </Navbar>
+      <header className="navbar mb-2">
+        <div className="container">
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <div className="navbar-brand">PiBlock</div>
+            <div className="nav-search">
+              <input placeholder="Search domains across lists" value={searchQ} onChange={e=>setSearchQ(e.target.value)} onKeyDown={e=>{ if (e.key==='Enter') doGlobalSearch(searchQ) }} />
+              <button className="btn small" onClick={()=>doGlobalSearch(searchQ)}>Search</button>
+            </div>
+          </div>
+
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <div className="nav-actions">
+              <button className={`nav-link ${view==='lists' ? 'active' : ''}`} onClick={()=>{ setView('lists'); setNavOpen(false) }}><BsList style={{marginRight:6}}/> Lists</button>
+              <button className={`nav-link ${view==='analytics' ? 'active' : ''}`} onClick={()=>{ setView('analytics'); setNavOpen(false) }}><BsBarChart style={{marginRight:6}}/> Analytics</button>
+              <button className={`nav-link ${view==='logs' ? 'active' : ''}`} onClick={()=>{ setView('logs'); setNavOpen(false) }}><BsFileEarmarkText style={{marginRight:6}}/> Logs</button>
+              <button className={`nav-link ${view==='settings' ? 'active' : ''}`} onClick={()=>{ setView('settings'); setNavOpen(false) }}><BsGear/></button>
+            </div>
+            <button title="Toggle theme" className="nav-toggle" onClick={toggleTheme}>{document.body.classList.contains('light') ? '🌙' : '☀️'}</button>
+            <button className="nav-toggle" onClick={()=>setNavOpen(o=>!o)} aria-expanded={navOpen}>☰</button>
+          </div>
+        </div>
+      </header>
+
+      {/* Search results modal/panel */}
+      {searchResults && (
+        <div style={{position:'fixed',left:12,right:12,top:72,bottom:12,zIndex:1200}}>
+          <div className="panel" style={{height:'100%', overflow:'auto'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+              <h3>Search results for “{searchResults.q}”</h3>
+              <div>
+                <button className="btn small" onClick={()=>setSearchResults(null)}>Close</button>
+              </div>
+            </div>
+            {searchResults.error && <div className="muted">Error: {searchResults.error}</div>}
+            {!searchResults.error && searchResults.results && searchResults.results.length===0 && <div className="muted">No results</div>}
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {(searchResults.results || []).map((r, idx) => (
+                <div key={idx} className="list-item">
+                  <div>{r.domain}</div>
+                  <div className="muted small">{r.list}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <main>
         {view === 'lists' && !selected && <ListsPanel onNavigate={(name)=>{ setSelected(name); setView('lists') }} />}
         {view === 'lists' && selected && <ListDetail name={selected} onClose={()=>{ setSelected(null); setRefreshFlag(f=>f+1) }} onRemoved={()=>setRefreshFlag(f=>f+1)} />}

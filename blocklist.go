@@ -521,17 +521,25 @@ func readLines(r io.Reader) ([]string, error) {
             continue
         }
         fields := strings.Fields(line)
-        if len(fields) < 2 {
-            // not a hosts entry with hostname
+        if len(fields) == 0 {
             continue
         }
-        // fields[0] is IP, rest are hosts
-        for _, h := range fields[1:] {
-            h = strings.TrimSpace(h)
+        // Accept both hosts-style lines (IP + hostnames) and plain domain-per-line.
+        // If the first token looks like an IP, treat remaining tokens as hosts.
+        // Otherwise treat all tokens as hostnames/domains.
+        startIdx := 0
+        if isIPString(fields[0]) {
+            // hosts-style line: IP followed by one or more hostnames
+            if len(fields) < 2 {
+                continue
+            }
+            startIdx = 1
+        }
+        for i := startIdx; i < len(fields); i++ {
+            h := strings.TrimSpace(fields[i])
             if h == "" {
                 continue
             }
-            // normalize and skip ips/local names
             n := normalizePattern(h)
             if n == "" || isLocalHostName(n) || isIPString(n) {
                 continue

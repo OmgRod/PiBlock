@@ -34,3 +34,5 @@ yarn-error.log*
 !go.sum
 
 blocklist/
+rustdns/target
+rustdns/Cargo.lock

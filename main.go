@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+	"io"
 )
 
 func main() {
@@ -24,10 +25,39 @@ func main() {
 		}
 	}()
 
-	// Start DNS server (uses blocklist manager)
+	// Ensure block page server is running if redirect mode is enabled.
+	if AppConfig.BlockingMode == "redirect" && AppConfig.BlockPagePort > 0 {
+		// If no explicit BlockPageIP configured, attempt to detect a local IP reachable by clients
+		if AppConfig.BlockPageIP == "" {
+			if ip := DetectLocalIP(); ip != "" {
+				AppConfig.BlockPageIP = ip
+				log.Printf("detected local IP for block page: %s", ip)
+			} else {
+				log.Printf("could not detect local IP for block page; defaulting to 127.0.0.1")
+				AppConfig.BlockPageIP = "127.0.0.1"
+			}
+		}
+		StartBlockPageServer()
+	}
+
+	// Start DNS server: prefer calling into the Rust runtime via FFI (externs). If
+	// that fails, fall back to launching a rust subprocess; if that also fails fall
+	// back to the Go DNS server implementation.
 	go func() {
-		if err := StartDNSServer(":53", bm); err != nil {
-			log.Fatalf("DNS server error: %v", err)
+		// Try to start linked rustdns via cgo FFI
+		if err := StartRustLinked("127.0.0.1:8082", "0.0.0.0:5353"); err == nil {
+			log.Printf("started rustdns via FFI")
+			return
+		} else {
+			log.Printf("StartRustLinked failed: %v; trying subprocess approach", err)
+		}
+
+		// Try subprocess launch
+		if err := startRustDNSIfPresent(); err != nil {
+			log.Printf("rust dns subprocess start failed: %v; falling back to Go DNS server", err)
+			if err2 := StartDNSServer(":53", bm); err2 != nil {
+				log.Fatalf("DNS server error: %v", err2)
+			}
 		}
 	}()
 
@@ -112,4 +142,77 @@ func main() {
 
 	// Block forever
 	select {}
+}
+
+// startRustDNSIfPresent attempts to find a prebuilt Rust DNS binary and launch it as a
+// subprocess. It sets sensible environment variables for the control API and UDP bind.
+// If no binary is found it returns an error so the caller may fall back to Go DNS.
+func startRustDNSIfPresent() error {
+	// Search possible locations for a rustdns binary (developer builds and packaged paths)
+	candidates := []string{
+		"./rustdns/target/release/rustdns",
+		"./rustdns/rustdns",
+		"./rustdns/bin/rustdns",
+		"./rustdns/bin/rustdns-linux",
+	}
+	var bin string
+	for _, c := range candidates {
+		if info, err := os.Stat(c); err == nil && !info.IsDir() {
+			bin = c
+			break
+		}
+	}
+	// Also allow override from env
+	if bin == "" {
+		if p := os.Getenv("RUSTDNS_PATH"); p != "" {
+			if info, err := os.Stat(p); err == nil && !info.IsDir() {
+				bin = p
+			}
+		}
+	}
+	if bin == "" {
+		return fmt.Errorf("rustdns binary not found in known locations")
+	}
+
+	// Ensure executable bit on unix-like platforms
+	if runtime.GOOS != "windows" {
+		_ = os.Chmod(bin, 0755)
+	}
+
+	log.Printf("starting rustdns subprocess: %s", bin)
+	cmd := exec.Command(bin)
+	// configure rustdns control API and UDP bind via env
+	env := os.Environ()
+	// control API binds to localhost:8082 by default; make explicit
+	env = append(env, "RUSTDNS_HTTP_ADDR=127.0.0.1:8082")
+	// use non-privileged UDP port by default; system integrators can set RUSTDNS_UDP_BIND to :53
+	env = append(env, "RUSTDNS_UDP_BIND=0.0.0.0:5353")
+	cmd.Env = env
+	// redirect stdout/stderr to our process logs
+	stdout, _ := cmd.StdoutPipe()
+	stderr, _ := cmd.StderrPipe()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	// stream subprocess logs
+	go func() {
+		io.Copy(os.Stdout, stdout)
+	}()
+	go func() {
+		io.Copy(os.Stderr, stderr)
+	}()
+
+	// monitor process and return success (don't block) — if it exits soon, return error
+	go func() {
+		err := cmd.Wait()
+		if err != nil {
+			log.Printf("rustdns exited: %v", err)
+		} else {
+			log.Printf("rustdns exited")
+		}
+	}()
+
+	// return nil indicating we launched rustdns (caller may still choose to proceed)
+	return nil
 }

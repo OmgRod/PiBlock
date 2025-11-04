@@ -11,6 +11,7 @@ import (
     "path"
     "strings"
     "log"
+    "time"
     "errors"
 )
 
@@ -88,6 +89,8 @@ func StartInternalAPIServer(bm *BlocklistManager) error {
         }
         log.Printf("API /lists/create wrote %d lines to %s", added, req.Name)
         fmt.Fprintf(w, "added %d lines to %s\n", added, req.Name)
+        // notify Rust DNS control plane that lists changed (best-effort)
+        go notifyRustReload()
     })
 
     // GET /lists/items/{name}?offset=0&limit=100&q=foo
@@ -198,6 +201,7 @@ func StartInternalAPIServer(bm *BlocklistManager) error {
                 }
                 log.Printf("API /lists/%s/append added %d lines", name, added)
                 fmt.Fprintf(w, "added %d lines to %s\n", added, name)
+                go notifyRustReload()
                 return
             }
             // items
@@ -224,6 +228,7 @@ func StartInternalAPIServer(bm *BlocklistManager) error {
             }
             log.Printf("API /lists/%s/append added %d lines", name, added)
             fmt.Fprintf(w, "added %d lines to %s\n", added, name)
+            go notifyRustReload()
             return
         }
 
@@ -241,6 +246,7 @@ func StartInternalAPIServer(bm *BlocklistManager) error {
             _ = bm.LoadAll()
                 log.Printf("API deleted list %s", name)
             io.WriteString(w, "deleted\n")
+            go notifyRustReload()
             return
         }
 
@@ -263,6 +269,7 @@ func StartInternalAPIServer(bm *BlocklistManager) error {
             }
                 log.Printf("API replace wrote %d lines to %s", written, name)
             fmt.Fprintf(w, "wrote %d lines to %s\n", written, name)
+            go notifyRustReload()
             return
         }
 
@@ -353,4 +360,22 @@ func StartInternalAPIServer(bm *BlocklistManager) error {
     })
 
     return http.ListenAndServe(addr, mux)
+}
+
+// notifyRustReload attempts to POST to the Rust DNS control API to tell it to reload lists.
+// This is best-effort and runs quickly with a short timeout.
+func notifyRustReload() {
+    client := &http.Client{Timeout: 2 * time.Second}
+    resp, err := client.Post("http://127.0.0.1:8082/reload", "application/json", nil)
+    if err != nil {
+        log.Printf("notify rust reload failed: %v", err)
+        return
+    }
+    defer resp.Body.Close()
+    if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+        body, _ := io.ReadAll(resp.Body)
+        log.Printf("notify rust reload returned status %d: %s", resp.StatusCode, string(body))
+    } else {
+        log.Printf("notified rust reload")
+    }
 }
