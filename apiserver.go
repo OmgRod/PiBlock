@@ -366,7 +366,7 @@ func StartInternalAPIServer(bm *BlocklistManager) error {
 // This is best-effort and runs quickly with a short timeout.
 func notifyRustReload() {
     client := &http.Client{Timeout: 2 * time.Second}
-    resp, err := client.Post("http://127.0.0.1:8082/reload", "application/json", nil)
+    resp, err := client.Post("http://127.0.0.1:9080/reload", "application/json", nil)
     if err != nil {
         log.Printf("notify rust reload failed: %v", err)
         return

@@ -23,7 +23,7 @@ fn init_cells() {
 #[no_mangle]
 pub extern "C" fn rustdns_start(http_addr: *const c_char, udp_bind: *const c_char) -> i32 {
     init_cells();
-    let http = if http_addr.is_null() { "127.0.0.1:8082".to_string() } else {
+    let http = if http_addr.is_null() { "127.0.0.1:9080".to_string() } else {
         unsafe { CStr::from_ptr(http_addr).to_string_lossy().into_owned() }
     };
     let udp = if udp_bind.is_null() { "0.0.0.0:5353".to_string() } else {

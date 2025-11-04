@@ -45,7 +45,7 @@ func main() {
 	// back to the Go DNS server implementation.
 	go func() {
 		// Try to start linked rustdns via cgo FFI
-		if err := StartRustLinked("127.0.0.1:8082", "0.0.0.0:5353"); err == nil {
+		if err := StartRustLinked("127.0.0.1:9080", "0.0.0.0:5353"); err == nil {
 			log.Printf("started rustdns via FFI")
 			return
 		} else {
@@ -183,8 +183,8 @@ func startRustDNSIfPresent() error {
 	cmd := exec.Command(bin)
 	// configure rustdns control API and UDP bind via env
 	env := os.Environ()
-	// control API binds to localhost:8082 by default; make explicit
-	env = append(env, "RUSTDNS_HTTP_ADDR=127.0.0.1:8082")
+	// control API binds to localhost:9080 by default; make explicit
+	env = append(env, "RUSTDNS_HTTP_ADDR=127.0.0.1:9080")
 	// use non-privileged UDP port by default; system integrators can set RUSTDNS_UDP_BIND to :53
 	env = append(env, "RUSTDNS_UDP_BIND=0.0.0.0:5353")
 	cmd.Env = env

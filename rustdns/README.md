@@ -4,7 +4,7 @@ This is a small scaffold for a Rust-based DNS engine that will be controlled by 
 
 Goals for this scaffold
 
-- Expose an HTTP control API on `127.0.0.1:8082` with endpoints:
+ - Expose an HTTP control API on `127.0.0.1:9080` with endpoints:
   - `POST /reload` — reload `./blocklist/*.txt` into memory
   - `GET /stats` — return query/blocked counters
 - Run a UDP DNS resolver on `0.0.0.0:5353` (non-privileged port for testing). For production you can bind to port 53 with administrator privileges.
@@ -20,7 +20,7 @@ cd rustdns
 cargo run --release
 ```
 
-This will start the control HTTP API on `127.0.0.1:8082` and the UDP DNS server on `0.0.0.0:5353`.
+This will start the control HTTP API on `127.0.0.1:9080` and the UDP DNS server on `0.0.0.0:5353`.
 
 Making DNS active for your local network
 
@@ -49,7 +49,7 @@ netsh interface portproxy show all
 netsh interface portproxy delete v4tov4 listenaddress=0.0.0.0 listenport=53
 ```
 
-Note: netsh portproxy requires the "IP Helper" service to be running. On Windows you can also run the Rust server directly binding to port 53 if you start PowerShell as Administrator and set `RUSTDNS_UDP_BIND=0.0.0.0:53` and `RUSTDNS_HTTP_ADDR=127.0.0.1:8082`.
+Note: netsh portproxy requires the "IP Helper" service to be running. On Windows you can also run the Rust server directly binding to port 53 if you start PowerShell as Administrator and set `RUSTDNS_UDP_BIND=0.0.0.0:53` and `RUSTDNS_HTTP_ADDR=127.0.0.1:9080`.
 
 Linux (iptables/nft)
 
@@ -78,7 +78,7 @@ After=network.target
 
 [Service]
 Environment=RUSTDNS_UDP_BIND=0.0.0.0:53
-Environment=RUSTDNS_HTTP_ADDR=127.0.0.1:8082
+Environment=RUSTDNS_HTTP_ADDR=127.0.0.1:9080
 ExecStart=/usr/bin/cargo run --release --manifest-path=/path/to/rustdns/Cargo.toml
 Restart=on-failure
 
@@ -90,5 +90,5 @@ When binding to port 53 directly, ensure the service runs with adequate privileg
 
 Next steps
 
-- Integrate the Go API to POST `http://127.0.0.1:8082/reload` after list changes (done in the repository changes accompanying this scaffold).
+- Integrate the Go API to POST `http://127.0.0.1:9080/reload` after list changes (done in the repository changes accompanying this scaffold).
 - Improve wildcard matching semantics and add persistent metrics, TCP support, and optionally an HTTP streaming/event API.

@@ -43,7 +43,7 @@ pub async fn run_server(http_addr: String, udp_bind: String, mut shutdown_rx: to
         .route("/remove", post(move |b| http_remove(st_remove.clone(), b)))
         .route("/mode", post(move |b| http_mode(st_mode.clone(), b)));
 
-    let http_addr: SocketAddr = http_addr.parse().unwrap_or_else(|_| "127.0.0.1:8082".parse().unwrap());
+    let http_addr: SocketAddr = http_addr.parse().unwrap_or_else(|_| "127.0.0.1:9080".parse().unwrap());
     let server = axum::Server::bind(&http_addr).serve(app.into_make_service());
     info!("control API listening on http://{}", http_addr);
 

@@ -19,7 +19,7 @@ var AppConfig = &Config{
     Upstream: "1.1.1.1:53",
     BlockingMode: "redirect",
     BlockPageIP: "",
-    BlockPagePort: 8082,
+    BlockPagePort: 9080,
 }
 
 // DetectLocalIP determines a likely local IP address by opening a UDP connection.
