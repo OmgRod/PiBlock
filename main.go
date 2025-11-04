@@ -115,14 +115,15 @@ func main() {
 			}
 		}
 
-		// Start the Node server. Prefer a bundled node.exe to run server.js if available.
+		// Start the frontend in dev mode. Prefer a bundled npm if available and run
+		// `npm run dev -- --host 0.0.0.0 --port 3000` so the dev server binds to all
+		// interfaces and is reachable from other devices on the network.
 		var startCmd *exec.Cmd
-		serverJS := "server.js"
-		if _, err := os.Stat(nodeExe); err == nil {
-			startCmd = exec.Command(nodeExe, serverJS)
+		if _, err := os.Stat(npmCmd); err == nil {
+			startCmd = exec.Command(npmCmd, "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000")
 		} else {
-			// fallback to `node server.js` via PATH
-			startCmd = exec.Command("node", serverJS)
+			// fallback to system npm on PATH
+			startCmd = exec.Command("npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000")
 		}
 		startCmd.Dir = webDir
 		startCmd.Stdout = os.Stdout
