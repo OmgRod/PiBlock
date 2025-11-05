@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -292,7 +294,14 @@ func handleLists(w http.ResponseWriter, r *http.Request, bm *BlocklistManager, a
 			return
 		}
 
-		fp := path.Join(bm.dir, userListName+".txt")
+		// Sanitize list name to prevent path traversal
+		cleanName := filepath.Clean(userListName)
+		if strings.Contains(cleanName, "..") || strings.Contains(cleanName, "/") || strings.Contains(cleanName, "\\") {
+			http.Error(w, "invalid list name", http.StatusBadRequest)
+			return
+		}
+
+		fp := filepath.Join(bm.dir, cleanName+".txt")
 		if err := os.Remove(fp); err != nil {
 			log.Printf("API delete %s error: %v", fp, err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -389,6 +398,27 @@ func handleValidate(bm *BlocklistManager) http.HandlerFunc {
 			http.Error(w, "bad request: "+err.Error(), http.StatusBadRequest)
 			return
 		}
+
+		// Validate URL to prevent SSRF
+		parsedURL, err := url.Parse(req.URL)
+		if err != nil {
+			http.Error(w, "invalid URL", http.StatusBadRequest)
+			return
+		}
+
+		// Only allow http and https schemes
+		if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+			http.Error(w, "only http and https URLs are allowed", http.StatusBadRequest)
+			return
+		}
+
+		// Block requests to private IP ranges and localhost
+		hostname := parsedURL.Hostname()
+		if isPrivateOrLocalhostIP(hostname) {
+			http.Error(w, "requests to private/localhost addresses are not allowed", http.StatusBadRequest)
+			return
+		}
+
 		client := &http.Client{Timeout: 15 * time.Second}
 		resp, err := client.Get(req.URL)
 		if err != nil {
@@ -412,4 +442,28 @@ func handleValidate(bm *BlocklistManager) http.HandlerFunc {
 		out := map[string]interface{}{"count": len(lines), "sample": sample}
 		_ = json.NewEncoder(w).Encode(out)
 	}
+}
+
+// isPrivateOrLocalhostIP checks if a hostname resolves to a private or localhost IP
+func isPrivateOrLocalhostIP(hostname string) bool {
+	// Check common localhost names
+	if hostname == "localhost" || hostname == "127.0.0.1" || hostname == "::1" || hostname == "0.0.0.0" {
+		return true
+	}
+
+	// Try to resolve the hostname to IPs
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		// If lookup fails, be conservative and block
+		return true
+	}
+
+	// Check if any resolved IP is private or loopback
+	for _, ip := range ips {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() {
+			return true
+		}
+	}
+
+	return false
 }
