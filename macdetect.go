@@ -9,6 +9,9 @@ import (
 
 // GetClientMAC attempts to determine the client's MAC address from the request
 // First tries X-Client-MAC header (set by client), then tries ARP lookup for local IPs
+// NOTE: For production, this should be enhanced with proper network-level MAC detection
+// or integration with DHCP server. The IP fallback is a temporary measure and should
+// be noted as a security limitation - devices behind NAT will share the same identifier.
 func GetClientMAC(r *http.Request) (string, error) {
 	// Check if client sent their MAC in a header
 	if mac := r.Header.Get("X-Client-MAC"); mac != "" {
@@ -26,8 +29,10 @@ func GetClientMAC(r *http.Request) (string, error) {
 		return normalizeMACAddress(mac), nil
 	}
 
-	// For non-local clients or when ARP fails, use IP as identifier
-	// This is a fallback - the frontend should send the MAC via header
+	// SECURITY NOTE: For non-local clients or when ARP fails, we use IP as identifier.
+	// This is a known limitation - devices behind NAT will share the same identifier.
+	// In production, consider requiring users to manually enter or detect MAC via
+	// client-side tools, or integrate with network infrastructure (DHCP/router).
 	return fmt.Sprintf("ip:%s", clientIP), nil
 }
 

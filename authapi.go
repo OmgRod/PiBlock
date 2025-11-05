@@ -324,8 +324,8 @@ func guestAllowedMiddleware(am *AccountManager, next http.HandlerFunc) http.Hand
 			return
 		}
 
-		// Check if guest is trying to modify
-		if session.IsGuest && r.Method != http.MethodGet {
+		// Check if guest is trying to modify (allow GET, HEAD, OPTIONS for guests)
+		if session.IsGuest && r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
 			http.Error(w, "guests can only view, not modify", http.StatusForbidden)
 			return
 		}

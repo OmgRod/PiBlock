@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react'
 
 // Utility to get the MAC address from the browser (simplified approach)
+// NOTE: This is a demonstration implementation with known limitations:
+// 1. Browser fingerprinting is not a reliable MAC address substitute
+// 2. The generated identifier can be spoofed or cleared
+// 3. In production, consider:
+//    - Server-side MAC detection via ARP (requires local network)
+//    - DHCP server integration
+//    - Manual MAC entry with validation
+//    - Client-side tools/extensions for MAC detection
 async function getDeviceMAC() {
   // In a real implementation, this would need to be detected server-side
   // or provided by the user. For web apps, we can't directly access MAC.
@@ -296,6 +304,10 @@ export default function AuthGuard({ children }) {
   }
 
   // Inject session ID into all fetch requests
+  // NOTE: This is a simple approach for demonstration. In production, consider:
+  // - Using axios with interceptors
+  // - React Context API for authentication state
+  // - A dedicated HTTP client library
   const originalFetch = window.fetch
   window.fetch = function(...args) {
     const [url, options = {}] = args

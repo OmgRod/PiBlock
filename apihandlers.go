@@ -406,6 +406,12 @@ func handleValidate(bm *BlocklistManager) http.HandlerFunc {
 			return
 		}
 
+		// Require explicit scheme
+		if parsedURL.Scheme == "" {
+			http.Error(w, "URL must include scheme (http or https)", http.StatusBadRequest)
+			return
+		}
+
 		// Only allow http and https schemes
 		if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
 			http.Error(w, "only http and https URLs are allowed", http.StatusBadRequest)

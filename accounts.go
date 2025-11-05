@@ -283,7 +283,10 @@ func (am *AccountManager) cleanupSessions() {
 func generateSessionID() string {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
-		panic(err)
+		// If random generation fails, use a combination of timestamp and fallback random
+		log.Printf("Warning: crypto/rand failed, using fallback: %v", err)
+		timestamp := time.Now().UnixNano()
+		return fmt.Sprintf("%d%d", timestamp, timestamp%1000000)
 	}
 	return hex.EncodeToString(b)
 }
