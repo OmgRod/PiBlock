@@ -18,9 +18,23 @@ func main() {
 		log.Fatalf("failed to initialize blocklist manager: %v", err)
 	}
 
-	// Start internal API server (binds to 127.0.0.1:8081)
+	// Initialize account manager
+	am, err := NewAccountManager("./data")
+	if err != nil {
+		log.Fatalf("failed to initialize account manager: %v", err)
+	}
+	defer am.Close()
+
+	// Start auth API server (binds to 127.0.0.1:8082)
 	go func() {
-		if err := StartInternalAPIServer(bm); err != nil {
+		if err := StartAuthAPIServer(am, "127.0.0.1:8082"); err != nil {
+			log.Fatalf("auth API server error: %v", err)
+		}
+	}()
+
+	// Start internal API server with authentication (binds to 127.0.0.1:8081)
+	go func() {
+		if err := StartInternalAPIServerWithAuth(bm, am); err != nil {
 			log.Fatalf("internal API server error: %v", err)
 		}
 	}()

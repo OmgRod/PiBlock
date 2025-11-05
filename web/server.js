@@ -6,6 +6,7 @@ const app = express()
 const PORT = process.env.PORT || 3000
 // where Go internal API is expected to run
 const GO_API = process.env.GO_API || 'http://127.0.0.1:8081'
+const AUTH_API = process.env.AUTH_API || 'http://127.0.0.1:8082'
 
 app.use(express.json())
 
@@ -19,11 +20,11 @@ app.use((req, res, next) => {
 
 // proxy POST/GET/DELETE requests under /api/* to the Go internal API
 // Proxy handler used for the public API routes the frontend currently calls
-async function proxyHandler(req, res) {
+async function proxyHandler(req, res, targetAPI = GO_API) {
   try {
     // forward the original path+query directly to the Go internal API
     const targetPath = req.originalUrl
-    const url = GO_API + targetPath
+    const url = targetAPI + targetPath
     const opts = { method: req.method, headers: {} }
     // forward most headers from the incoming request, except host
     opts.headers = Object.assign({}, req.headers)
@@ -57,6 +58,10 @@ async function proxyHandler(req, res) {
     res.status(500).send(err.message)
   }
 }
+
+// Proxy auth routes to AUTH_API
+const authRoutes = ['/auth/*']
+authRoutes.forEach(p => app.use(p, (req, res) => proxyHandler(req, res, AUTH_API)))
 
 // Proxy the routes used by the frontend directly so existing fetch calls
 // (e.g. fetch('/lists')) work without changing the frontend.

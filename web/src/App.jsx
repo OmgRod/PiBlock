@@ -450,23 +450,120 @@ export default function App(){
 function SettingsPanel(){
   const [apiBase, setApiBase] = useState('/')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [oldPasscode, setOldPasscode] = useState('')
+  const [newPasscode, setNewPasscode] = useState('')
+  const [confirmNewPasscode, setConfirmNewPasscode] = useState('')
+  const [changePasscodeMsg, setChangePasscodeMsg] = useState('')
 
   useEffect(()=>{
     // nothing heavy here yet; placeholder to later fetch config from API
   }, [])
+
+  const handleLogout = async () => {
+    const sessionId = localStorage.getItem('session_id')
+    if (sessionId) {
+      try {
+        await fetch('/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId })
+        })
+      } catch (e) {
+        console.error('Logout failed:', e)
+      }
+    }
+    localStorage.removeItem('session_id')
+    window.location.reload()
+  }
+
+  const handleChangePasscode = async () => {
+    setChangePasscodeMsg('')
+    
+    if (!oldPasscode || !newPasscode || !confirmNewPasscode) {
+      setChangePasscodeMsg('All fields are required')
+      return
+    }
+    
+    if (newPasscode.length < 4) {
+      setChangePasscodeMsg('New passcode must be at least 4 characters')
+      return
+    }
+    
+    if (newPasscode !== confirmNewPasscode) {
+      setChangePasscodeMsg('New passcodes do not match')
+      return
+    }
+    
+    const sessionId = localStorage.getItem('session_id')
+    try {
+      const resp = await fetch('/auth/change-passcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          old_passcode: oldPasscode,
+          new_passcode: newPasscode
+        })
+      })
+      
+      if (resp.ok) {
+        setChangePasscodeMsg('✓ Passcode changed successfully')
+        setOldPasscode('')
+        setNewPasscode('')
+        setConfirmNewPasscode('')
+      } else {
+        const text = await resp.text()
+        setChangePasscodeMsg('Error: ' + text)
+      }
+    } catch (e) {
+      setChangePasscodeMsg('Connection error: ' + e.message)
+    }
+  }
 
   return (
     <div className="panel">
       <div className="panel-header"><h2>Settings</h2></div>
       <div className="list-controls">
         <div className="muted">Basic settings for PiBlock. More options (upstream DNS, whitelist, gravity) will be added.</div>
-        <div style={{marginTop:8}}>
-          <label className="small muted">API base</label>
-          <div style={{display:'flex',gap:8,marginTop:6}}>
-            <input value={apiBase} onChange={e=>setApiBase(e.target.value)} />
-            <button className="btn small">Save</button>
+        
+        <div style={{marginTop:24,padding:16,border:'1px solid var(--border)',borderRadius:8}}>
+          <h4 style={{marginBottom:12}}>Account</h4>
+          <div style={{marginBottom:12}}>
+            <button className="btn btn-danger small" onClick={handleLogout}>Logout</button>
+          </div>
+          
+          <div style={{marginTop:16}}>
+            <h5 style={{marginBottom:8}}>Change Passcode</h5>
+            <div style={{display:'flex',flexDirection:'column',gap:8,maxWidth:300}}>
+              <input
+                type="password"
+                placeholder="Current passcode"
+                value={oldPasscode}
+                onChange={e => setOldPasscode(e.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="New passcode (min 4 chars)"
+                value={newPasscode}
+                onChange={e => setNewPasscode(e.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="Confirm new passcode"
+                value={confirmNewPasscode}
+                onChange={e => setConfirmNewPasscode(e.target.value)}
+              />
+              {changePasscodeMsg && (
+                <div className={changePasscodeMsg.startsWith('✓') ? 'muted' : ''} 
+                     style={{color: changePasscodeMsg.startsWith('✓') ? '#4caf50' : '#ff6b6b'}}>
+                  {changePasscodeMsg}
+                </div>
+              )}
+              <button className="btn small" onClick={handleChangePasscode}>Change Passcode</button>
+            </div>
           </div>
         </div>
+        
         <div style={{marginTop:12}}>
           <label className="small muted">Advanced</label>
           <div style={{marginTop:6}}>
