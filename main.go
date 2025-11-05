@@ -69,7 +69,7 @@ func main() {
 		// Try subprocess launch
 		if err := startRustDNSIfPresent(); err != nil {
 			log.Printf("rust dns subprocess start failed: %v; falling back to Go DNS server", err)
-			if err2 := StartDNSServer(":53", bm); err2 != nil {
+			if err2 := StartDNSServer(":53", bm, am); err2 != nil {
 				log.Fatalf("DNS server error: %v", err2)
 			}
 		}

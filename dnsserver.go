@@ -9,7 +9,7 @@ import (
 )
 
 // StartDNSServer launches a UDP DNS server at addr (e.g. ":53") using the provided BlocklistManager.
-func StartDNSServer(addr string, bm *BlocklistManager) error {
+func StartDNSServer(addr string, bm *BlocklistManager, am *AccountManager) error {
     dns.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {
         msg := dns.Msg{}
         msg.SetReply(r)
@@ -29,7 +29,20 @@ func StartDNSServer(addr string, bm *BlocklistManager) error {
                 name = name[:len(name)-1]
             }
 
-            if bm.IsBlocked(name) {
+            // Get client IP and try to determine MAC address
+            clientIP := GetClientIP(clientAddr)
+            macAddress, _ := ipMACCache.GetMAC(clientIP)
+
+            // Check if blocked for this specific user
+            blocked := false
+            if macAddress != "" && am != nil {
+                blocked = bm.IsBlockedForUser(name, macAddress, am)
+            } else {
+                // If we can't identify the user, use global blocklist check
+                blocked = bm.IsBlocked(name)
+            }
+
+            if blocked {
                 // Depending on blocking mode, reply differently
                 switch AppConfig.BlockingMode {
                 case "redirect":
@@ -58,7 +71,7 @@ func StartDNSServer(addr string, bm *BlocklistManager) error {
                 }
                 // record analytics and write reply and stop processing
                 bm.RecordQueryWithClient(name, clientAddr, true)
-                log.Printf("blocked %s for client %s (mode=%s)", name, clientAddr, AppConfig.BlockingMode)
+                log.Printf("blocked %s for client %s (MAC: %s, mode=%s)", name, clientAddr, macAddress, AppConfig.BlockingMode)
                 _ = w.WriteMsg(&msg)
                 return
             }
@@ -76,7 +89,7 @@ func StartDNSServer(addr string, bm *BlocklistManager) error {
             }
             // record allowed query
             bm.RecordQueryWithClient(name, clientAddr, false)
-            log.Printf("allowed %s for client %s", name, clientAddr)
+            log.Printf("allowed %s for client %s (MAC: %s)", name, clientAddr, macAddress)
         }
 
         _ = w.WriteMsg(&msg)

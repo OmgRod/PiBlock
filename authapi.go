@@ -37,6 +37,10 @@ func StartAuthAPIServer(am *AccountManager, addr string) error {
 			req.MACAddress = mac
 		}
 
+		// Cache IP to MAC mapping
+		clientIP := getClientIP(r)
+		ipMACCache.SetIPMAC(clientIP, req.MACAddress)
+
 		exists, err := am.AccountExists(req.MACAddress)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
@@ -75,6 +79,10 @@ func StartAuthAPIServer(am *AccountManager, addr string) error {
 			}
 			req.MACAddress = mac
 		}
+
+		// Cache IP to MAC mapping
+		clientIP := getClientIP(r)
+		ipMACCache.SetIPMAC(clientIP, req.MACAddress)
 
 		if req.Passcode == "" {
 			http.Error(w, "passcode is required", http.StatusBadRequest)
@@ -123,6 +131,10 @@ func StartAuthAPIServer(am *AccountManager, addr string) error {
 			req.MACAddress = mac
 		}
 
+		// Cache IP to MAC mapping
+		clientIP := getClientIP(r)
+		ipMACCache.SetIPMAC(clientIP, req.MACAddress)
+
 		session, err := am.Authenticate(req.MACAddress, req.Passcode)
 		if err != nil {
 			log.Printf("Authentication failed for MAC %s: %v", req.MACAddress, err)
@@ -161,6 +173,10 @@ func StartAuthAPIServer(am *AccountManager, addr string) error {
 			}
 			req.MACAddress = mac
 		}
+
+		// Cache IP to MAC mapping
+		clientIP := getClientIP(r)
+		ipMACCache.SetIPMAC(clientIP, req.MACAddress)
 
 		session := am.CreateGuestSession(req.MACAddress)
 
