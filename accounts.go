@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -42,6 +43,11 @@ type Session struct {
 
 // NewAccountManager initializes the account database and manager
 func NewAccountManager(dataDir string) (*AccountManager, error) {
+	// Ensure the data directory exists so SQLite can create the DB file
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to ensure data dir %s: %w", dataDir, err)
+	}
+
 	dbPath := filepath.Join(dataDir, "accounts.db")
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {

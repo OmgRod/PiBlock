@@ -36,7 +36,7 @@ pub extern "C" fn rustdns_start(http_addr: *const c_char, udp_bind: *const c_cha
     }
 
     // create shutdown channel
-    let (tx, mut rx) = tokio::sync::watch::channel(false);
+    let (tx, rx) = tokio::sync::watch::channel(false);
     let _ = SHUTDOWN_TX.set(tx.clone());
 
     // spawn thread that runs tokio runtime

@@ -36,4 +36,4 @@ yarn-error.log*
 blocklist/
 rustdns/target
 rustdns/Cargo.lock
-data/*.db
+data/

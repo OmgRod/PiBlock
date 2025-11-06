@@ -17,6 +17,8 @@ export default defineConfig({
         rewrite: (path) => path
       },
       '/analytics': { target: 'http://127.0.0.1:8081', changeOrigin: true },
+  '/auth': { target: 'http://127.0.0.1:8082', changeOrigin: true },
+  '/auth/*': { target: 'http://127.0.0.1:8082', changeOrigin: true },
       '/validate': { target: 'http://127.0.0.1:8081', changeOrigin: true },
       '/reload': { target: 'http://127.0.0.1:8081', changeOrigin: true },
       '/logs': { target: 'http://127.0.0.1:8081', changeOrigin: true },

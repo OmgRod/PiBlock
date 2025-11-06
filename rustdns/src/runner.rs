@@ -10,7 +10,7 @@ use tokio::sync::RwLock;
 use std::sync::atomic::AtomicU64;
 use tracing::info;
 
-pub async fn run_server(http_addr: String, udp_bind: String, mut shutdown_rx: tokio::sync::watch::Receiver<bool>) {
+pub async fn run_server(http_addr: String, udp_bind: String, shutdown_rx: tokio::sync::watch::Receiver<bool>) {
     tracing_subscriber::fmt::init();
 
     let lists = Arc::new(RwLock::new(HashSet::new()));
